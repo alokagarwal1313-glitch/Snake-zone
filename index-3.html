@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Snake Zone Online</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--text:#eaf2ff;--acc:#38f2a6;--acc2:#7a5cff;--panel:rgba(15,22,45,.72)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Roboto,sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;pointer-events:none;background:var(--panel);border-radius:12px;padding:8px 12px;font-size:13px;font-weight:600}
+#me{left:10px;top:calc(10px + env(safe-area-inset-top,0px));font-size:15px}
+#me b{color:var(--acc);font-size:20px}
+#lb{right:10px;top:calc(10px + env(safe-area-inset-top,0px));min-width:130px;line-height:1.55}
+#lb div{display:flex;justify-content:space-between;gap:10px}
+#boost{position:fixed;right:22px;bottom:calc(28px + env(safe-area-inset-bottom,0px));width:84px;height:84px;border-radius:50%;border:2px solid var(--acc2);background:rgba(122,92,255,.28);color:var(--text);font-weight:800;font-size:14px;touch-action:none}
+#boost.on{background:var(--acc2)}
+#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(6,10,24,.82);text-align:center;padding:20px}
+#menu h1{margin:0;font-size:40px;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+#menu p{margin:0;opacity:.8;max-width:280px;line-height:1.5}
+#nm{border:2px solid var(--acc2);background:transparent;color:var(--text);border-radius:12px;padding:10px 14px;font-size:17px;text-align:center;width:220px}
+#sw{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:280px}
+#sw i{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
+#sw i.sel{border-color:#fff}
+#go{border:0;border-radius:30px;padding:14px 44px;font-size:20px;font-weight:800;color:#06202a;background:linear-gradient(90deg,var(--acc),#52c7ff)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="me">Length <b id="len">0</b> &nbsp; Players <b id="pl">1</b></div>
+<div class="hud" id="lb"></div>
+<button id="boost">BOOST</button>
+<div id="menu"><h1>SNAKE ZONE</h1><p id="mt">Online! Dusre real players is hi map mein hain. Ungli drag karke snake ghumao.</p>
+<input id="nm" maxlength="12" placeholder="Apna naam"><div id="sw"></div><button id="go">PLAY</button></div>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d'),W=7000,$=id=>document.getElementById(id);
+let w,h,dpr;function rs(){dpr=Math.min(devicePixelRatio||1,2);w=innerWidth;h=innerHeight;cv.width=w*dpr;cv.height=h*dpr}
+addEventListener('resize',rs);rs();
+let ws,alive=false,st=null,me=null,others=new Map(),cam={x:W/2,y:W/2},zoom=1,joy=null,ang=0,boost=false,myHue=150;
+try{const sh=localStorage.getItem('szHue');if(sh!==null)myHue=+sh;$('nm').value=localStorage.getItem('szName')||''}catch(e){}
+const R=n=>9+Math.min(n,250)*0.035,col=(hu,l)=>'hsl('+hu+',90%,'+l+'%)';
+function ease(p,f){const n=f.length/2;p.length=n;
+for(let i=0;i<n;i++){const tx=f[i*2],ty=f[i*2+1],q=p[i];
+if(!q)p[i]={x:tx,y:ty};else if(Math.abs(tx-q.x)>3000||Math.abs(ty-q.y)>3000){q.x=tx;q.y=ty}else{q.x+=(tx-q.x)*.3;q.y+=(ty-q.y)*.3}}}
+function show(msg,btn){$('mt').textContent=msg;$('go').textContent=btn;$('menu').style.display='flex'}
+function conn(cb){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+ws.onopen=cb;
+ws.onmessage=e=>{const m=JSON.parse(e.data);
+if(m.t==='s'){st=m;alive=true;if(!me)me={p:[]};me.t=m.me;me.hue=m.hue;me.bo=m.bo;
+const nx=new Map();for(const s of m.sn){const o=others.get(s[0])||{p:[]};o.name=s[1];o.hue=s[2];o.bo=s[3];o.t=s[4];nx.set(s[0],o)}others=nx;
+$('len').textContent=m.me.length/2;$('pl').textContent=m.n;
+const lb=$('lb');lb.textContent='';for(let i=0;i<m.lb.length;i++){const d=document.createElement('div'),a=document.createElement('span'),b=document.createElement('span');a.textContent=(i+1)+'. '+m.lb[i][0];b.textContent=m.lb[i][1];d.append(a,b);lb.appendChild(d)}}
+else if(m.t==='dead'){alive=false;me=null;show('Game over! Aapki length: '+m.len,'PLAY AGAIN')}};
+ws.onclose=()=>{alive=false;show('Server se connection toot gaya. Dobara PLAY dabao.','PLAY')}}
+function join(){alive=false;me=null;try{localStorage.setItem('szName',$('nm').value)}catch(e){}
+ws.send(JSON.stringify({t:'join',name:$('nm').value,hue:myHue}));$('menu').style.display='none'}
+$('go').onclick=()=>{if(ws&&ws.readyState===1)join();else{$('mt').textContent='Connect ho raha hai... (pehli baar 30-60 second lag sakte hain)';conn(join)}};
+[150,0,30,55,200,260,300,180].forEach(hu=>{const e=document.createElement('i');e.style.background=col(hu,52);if(hu===myHue)e.className='sel';
+e.onclick=()=>{myHue=hu;try{localStorage.setItem('szHue',hu)}catch(_){}document.querySelectorAll('#sw i').forEach(o=>o.className='');e.className='sel'};$('sw').appendChild(e)});
+cv.addEventListener('pointerdown',e=>{if(!joy){joy={id:e.pointerId,ox:e.clientX,oy:e.clientY,cx:e.clientX,cy:e.clientY};cv.setPointerCapture(e.pointerId)}});
+cv.addEventListener('pointermove',e=>{if(joy&&joy.id===e.pointerId){joy.cx=e.clientX;joy.cy=e.clientY}});
+const up=e=>{if(joy&&joy.id===e.pointerId)joy=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+const bb=$('boost'),bon=e=>{e.preventDefault();boost=true;bb.classList.add('on')},boff=()=>{boost=false;bb.classList.remove('on')};
+bb.addEventListener('pointerdown',bon);bb.addEventListener('pointerup',boff);bb.addEventListener('pointercancel',boff);bb.addEventListener('pointerleave',boff);
+addEventListener('keydown',e=>{if(e.code==='Space')boost=true});addEventListener('keyup',e=>{if(e.code==='Space')boost=false});
+setInterval(()=>{if(!alive||!ws||ws.readyState!==1)return;
+if(joy){const dx=joy.cx-joy.ox,dy=joy.cy-joy.oy;if(dx*dx+dy*dy>64)ang=Math.atan2(dy,dx)}
+ws.send(JSON.stringify({t:'in',a:ang,b:boost?1:0}))},50);
+function drawSnake(s){const n=s.p.length,r=R(n);
+for(let i=n-1;i>=0;i--){const g=s.p[i];if(Math.abs(g.x-cam.x)>w/zoom/2+40||Math.abs(g.y-cam.y)>h/zoom/2+40)continue;
+x.globalAlpha=s.bo?.28:.14;x.fillStyle=col(s.hue,60);x.beginPath();x.arc(g.x,g.y,r*1.8,0,6.3);x.fill();
+x.globalAlpha=1;x.fillStyle=col(s.hue,i%2?48:56);x.beginPath();x.arc(g.x,g.y,r,0,6.3);x.fill()}
+if(n<2)return;const g=s.p[0],a=Math.atan2(g.y-s.p[1].y,g.x-s.p[1].x),ex=Math.cos(a),ey=Math.sin(a);
+for(const sd of[-1,1]){const px=g.x+ex*r*.4-ey*r*.5*sd,py=g.y+ey*r*.4+ex*r*.5*sd;
+x.fillStyle='#fff';x.beginPath();x.arc(px,py,r*.34,0,6.3);x.fill();x.fillStyle='#111';x.beginPath();x.arc(px+ex*r*.1,py+ey*r*.1,r*.17,0,6.3);x.fill()}
+if(s.name){x.fillStyle='rgba(255,255,255,.85)';x.font='bold 14px system-ui';x.textAlign='center';x.fillText(s.name,g.x,g.y-r-10)}}
+function draw(){x.setTransform(dpr,0,0,dpr,0,0);x.fillStyle='#0b1020';x.fillRect(0,0,w,h);
+if(me&&me.t){ease(me.p,me.t);for(const o of others.values())ease(o.p,o.t);
+const L=me.p.length,tz=Math.max(.5,Math.min(w,h)/560)*(1-Math.min(L,300)/800);zoom+=(tz-zoom)*.05;
+const hd=me.p[0];if(Math.abs(hd.x-cam.x)>3000||Math.abs(hd.y-cam.y)>3000){cam.x=hd.x;cam.y=hd.y}else{cam.x+=(hd.x-cam.x)*.12;cam.y+=(hd.y-cam.y)*.12}}
+x.translate(w/2,h/2);x.scale(zoom,zoom);x.translate(-cam.x,-cam.y);
+const x0=cam.x-w/zoom/2,x1=cam.x+w/zoom/2,y0=cam.y-h/zoom/2,y1=cam.y+h/zoom/2;
+x.fillStyle='rgba(120,150,255,.16)';
+for(let gx=Math.floor(x0/70)*70;gx<=x1;gx+=70)for(let gy=Math.floor(y0/70)*70;gy<=y1;gy+=70){x.beginPath();x.arc(gx,gy,2.5,0,6.3);x.fill()}
+if(st)for(const f of st.f){const rr=f[3]>1?6:4;x.globalAlpha=.25;x.fillStyle=col(f[2],60);x.beginPath();x.arc(f[0],f[1],rr*2.2,0,6.3);x.fill();
+x.globalAlpha=1;x.fillStyle=col(f[2],65);x.beginPath();x.arc(f[0],f[1],rr,0,6.3);x.fill()}
+for(const o of others.values())drawSnake(o);
+if(me&&me.t)drawSnake({p:me.p,hue:me.hue,bo:me.bo});
+x.setTransform(dpr,0,0,dpr,0,0);
+if(joy){x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=3;x.beginPath();x.arc(joy.ox,joy.oy,48,0,6.3);x.stroke();
+const dx=joy.cx-joy.ox,dy=joy.cy-joy.oy,d=Math.min(48,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);
+x.fillStyle='rgba(56,242,166,.55)';x.beginPath();x.arc(joy.ox+Math.cos(a)*d,joy.oy+Math.sin(a)*d,22,0,6.3);x.fill()}
+requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>
