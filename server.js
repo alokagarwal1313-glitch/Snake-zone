@@ -57,4 +57,5 @@ ws.on('close',()=>{const s=snakes.find(o=>o.ws===ws);if(s)snakes=snakes.filter(o
 let tick=0;
 setInterval(()=>{for(const s of snakes.slice())step(s,1/30);
 while(foods.length<NF)foods.push(food());if(foods.length>NF+1500)foods.splice(0,300);
-if(++tick%2===0)bc()},33)
+if(++tick%2===0)bc()},33);
+srv.listen(PORT,'0.0.0.0',()=>console.log('Snake Zone running on port '+PORT));
