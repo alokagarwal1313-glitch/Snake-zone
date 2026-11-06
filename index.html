@@ -42,7 +42,7 @@ try{const sh=localStorage.getItem('szHue');if(sh!==null)myHue=+sh;$('nm').value=
 const R=n=>9+Math.min(n,250)*0.035,col=(hu,l)=>'hsl('+hu+',90%,'+l+'%)';
 function ease(p,f){const n=f.length/2;p.length=n;
 for(let i=0;i<n;i++){const tx=f[i*2],ty=f[i*2+1],q=p[i];
-if(!q)p[i]={x:tx,y:ty};else if(Math.abs(tx-q.x)>3000||Math.abs(ty-q.y)>3000){q.x=tx;q.y=ty}else{q.x+=(tx-q.x)*.3;q.y+=(ty-q.y)*.3}}}
+if(!q)p[i]={x:tx,y:ty};else if(Math.abs(tx-q.x)>3000||Math.abs(ty-q.y)>3000){q.x=tx;q.y=ty}else{q.x+=(tx-q.x)*.3;q.y+=(ty-q.y)*.5}}}
 function show(msg,btn){$('mt').textContent=msg;$('go').textContent=btn;$('menu').style.display='flex'}
 function conn(cb){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
 ws.onopen=cb;
@@ -66,7 +66,7 @@ bb.addEventListener('pointerdown',bon);bb.addEventListener('pointerup',boff);bb.
 addEventListener('keydown',e=>{if(e.code==='Space')boost=true});addEventListener('keyup',e=>{if(e.code==='Space')boost=false});
 setInterval(()=>{if(!alive||!ws||ws.readyState!==1)return;
 if(joy){const dx=joy.cx-joy.ox,dy=joy.cy-joy.oy;if(dx*dx+dy*dy>64)ang=Math.atan2(dy,dx)}
-ws.send(JSON.stringify({t:'in',a:ang,b:boost?1:0}))},50);
+ws.send(JSON.stringify({t:'in',a:ang,b:boost?1:0}))},33);
 function drawSnake(s){const n=s.p.length,r=R(n);
 for(let i=n-1;i>=0;i--){const g=s.p[i];if(Math.abs(g.x-cam.x)>w/zoom/2+40||Math.abs(g.y-cam.y)>h/zoom/2+40)continue;
 x.globalAlpha=s.bo?.28:.14;x.fillStyle=col(s.hue,60);x.beginPath();x.arc(g.x,g.y,r*1.8,0,6.3);x.fill();
@@ -88,7 +88,7 @@ x.globalAlpha=1;x.fillStyle=col(f[2],65);x.beginPath();x.arc(f[0],f[1],rr,0,6.3)
 for(const o of others.values())drawSnake(o);
 if(me&&me.t)drawSnake({p:me.p,hue:me.hue,bo:me.bo});
 x.setTransform(dpr,0,0,dpr,0,0);
-if(joy){x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=3;x.beginPath();x.arc(joy.ox,joy.oy,48,0,6.3);x.stroke();
+if(false){x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=3;x.beginPath();x.arc(joy.ox,joy.oy,48,0,6.3);x.stroke();
 const dx=joy.cx-joy.ox,dy=joy.cy-joy.oy,d=Math.min(48,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);
 x.fillStyle='rgba(56,242,166,.55)';x.beginPath();x.arc(joy.ox+Math.cos(a)*d,joy.oy+Math.sin(a)*d,22,0,6.3);x.fill()}
 requestAnimationFrame(draw)}
